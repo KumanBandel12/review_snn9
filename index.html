@@ -1,0 +1,2242 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drag & Drop: Keranjang PDB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap"
+    rel="stylesheet">
+  <style>
+    /* ════════════════════════════════════════════════
+   DESIGN TOKENS
+════════════════════════════════════════════════ */
+    :root {
+      --bg: #FBF7F0;
+      --bg2: #F0E8D8;
+      --ink: #1A1208;
+      --ink2: #4A3F2F;
+      --accent: #D4522A;
+      --accent2: #E8823A;
+      --teal: #1A7A6E;
+      --teal-light: #E8F5F3;
+      --gold: #C99A2E;
+      --gold-light: #FDF6E3;
+      --blue: #2E5DA6;
+      --blue-light: #EBF0FA;
+      --green: #2E7D4F;
+      --green-light: #E8F5EC;
+      --red: #C0392B;
+      --red-light: #FDECEA;
+      --card-shadow: 0 4px 24px rgba(26, 18, 8, 0.12);
+      --radius: 16px;
+
+      /* Group colors */
+      --g1: #D4522A;
+      --g1-light: #FEECE6;
+      --g2: #2E5DA6;
+      --g2-light: #EBF0FA;
+      --g3: #1A7A6E;
+      --g3-light: #E8F5F3;
+      --g4: #7B3FA0;
+      --g4-light: #F3EAF9;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(circle at 15% 15%, rgba(212, 82, 42, 0.07) 0%, transparent 50%),
+        radial-gradient(circle at 85% 85%, rgba(26, 122, 110, 0.07) 0%, transparent 50%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ccircle cx='30' cy='30' r='1' fill='rgba(26,18,8,0.035)'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ════════════════════════════════════════════════
+   SCREENS
+════════════════════════════════════════════════ */
+    .screen {
+      position: relative;
+      z-index: 1;
+      display: none;
+      min-height: 100vh;
+    }
+
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ════════════════════════════════════════════════
+   INTRO / GROUP SELECT SCREEN
+════════════════════════════════════════════════ */
+    #intro-screen {
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      gap: 0;
+      overflow-y: auto;
+    }
+
+    .intro-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 6px 16px;
+      border-radius: 100px;
+      margin-bottom: 1.2rem;
+    }
+
+    .intro-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2rem, 6vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 0.5rem;
+    }
+
+    .intro-title span {
+      color: var(--accent);
+    }
+
+    .intro-sub {
+      font-size: 1rem;
+      color: var(--ink2);
+      max-width: 480px;
+      line-height: 1.7;
+      margin: 0 auto 1.8rem;
+    }
+
+    /* Rules pill strip */
+    .rules-strip {
+      display: flex;
+      gap: 0.7rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    .rule-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #fff;
+      border: 2px solid var(--bg2);
+      border-radius: 100px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--ink2);
+      box-shadow: 0 2px 8px rgba(26, 18, 8, 0.06);
+    }
+
+    .rule-pill.penalty {
+      border-color: var(--red);
+      color: var(--red);
+      background: var(--red-light);
+    }
+
+    .rule-pill.bonus {
+      border-color: var(--green);
+      color: var(--green);
+      background: var(--green-light);
+    }
+
+    .rule-pill.time {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: var(--gold-light);
+    }
+
+    /* Group selector */
+    .group-section {
+      width: 100%;
+      max-width: 600px;
+      margin-bottom: 1.5rem;
+    }
+
+    .group-section-label {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink2);
+      margin-bottom: 0.9rem;
+    }
+
+    .group-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.8rem;
+    }
+
+    @media (min-width: 500px) {
+      .group-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .group-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 1.1rem 0.8rem;
+      border-radius: var(--radius);
+      border: 2.5px solid var(--bg2);
+      background: #fff;
+      cursor: pointer;
+      transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+      box-shadow: var(--card-shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .group-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 28px rgba(26, 18, 8, 0.14);
+    }
+
+    .group-btn.selected {
+      border-width: 3px;
+      transform: translateY(-2px);
+    }
+
+    .group-btn[data-group="1"] {
+      border-color: var(--g1);
+    }
+
+    .group-btn[data-group="1"].selected {
+      background: var(--g1-light);
+      border-color: var(--g1);
+      box-shadow: 0 0 0 4px rgba(212, 82, 42, 0.15);
+    }
+
+    .group-btn[data-group="2"] {
+      border-color: var(--g2);
+    }
+
+    .group-btn[data-group="2"].selected {
+      background: var(--g2-light);
+      box-shadow: 0 0 0 4px rgba(46, 93, 166, 0.15);
+    }
+
+    .group-btn[data-group="3"] {
+      border-color: var(--g3);
+    }
+
+    .group-btn[data-group="3"].selected {
+      background: var(--g3-light);
+      box-shadow: 0 0 0 4px rgba(26, 122, 110, 0.15);
+    }
+
+    .group-btn[data-group="4"] {
+      border-color: var(--g4);
+    }
+
+    .group-btn[data-group="4"].selected {
+      background: var(--g4-light);
+      box-shadow: 0 0 0 4px rgba(123, 63, 160, 0.15);
+    }
+
+    .group-btn-emoji {
+      font-size: 1.8rem;
+    }
+
+    .group-btn-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .group-btn-score {
+      font-size: 0.72rem;
+      color: var(--ink2);
+      font-weight: 500;
+    }
+
+    .group-check {
+      position: absolute;
+      top: 7px;
+      right: 9px;
+      font-size: 0.9rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .group-btn.selected .group-check {
+      opacity: 1;
+    }
+
+    /* Level preview */
+    .level-preview {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 1.8rem;
+    }
+
+    .level-card {
+      background: #fff;
+      border: 2px solid var(--bg2);
+      border-radius: var(--radius);
+      padding: 1rem 1.2rem;
+      text-align: left;
+      min-width: 150px;
+      max-width: 190px;
+      box-shadow: var(--card-shadow);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .level-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent2);
+    }
+
+    .level-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.3rem;
+    }
+
+    .level-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.2rem;
+    }
+
+    .level-card p {
+      font-size: 0.76rem;
+      color: var(--ink2);
+      line-height: 1.5;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 100px;
+      padding: 16px 40px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 6px 20px rgba(212, 82, 42, 0.35);
+    }
+
+    .btn-primary:hover {
+      background: #BF4420;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(212, 82, 42, 0.4);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--ink);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      border: 2px solid rgba(26, 18, 8, 0.2);
+      border-radius: 100px;
+      padding: 12px 28px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+      background: rgba(212, 82, 42, 0.05);
+    }
+
+    .keyboard-hint {
+      margin-top: 1.2rem;
+      font-size: 0.78rem;
+      color: var(--ink2);
+      opacity: 0.65;
+    }
+
+    /* ════════════════════════════════════════════════
+   GAME SCREEN
+════════════════════════════════════════════════ */
+    #game-screen {
+      padding: 0;
+    }
+
+    .game-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.2rem;
+      background: #fff;
+      border-bottom: 2px solid var(--bg2);
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .game-header-left {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .level-indicator {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .active-group-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 100px;
+      margin-bottom: 1px;
+    }
+
+    .level-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .hud {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+    }
+
+    .hud-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .hud-label {
+      font-size: 0.6rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink2);
+      opacity: 0.7;
+    }
+
+    .hud-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--ink);
+      transition: color 0.2s;
+      min-width: 2.5ch;
+      text-align: center;
+    }
+
+    #timer-val.urgent {
+      color: var(--red);
+      animation: pulse-urgent 0.5s infinite;
+    }
+
+    @keyframes pulse-urgent {
+
+      0%,
+      100% {
+        transform: scale(1)
+      }
+
+      50% {
+        transform: scale(1.09)
+      }
+    }
+
+    /* Penalty shake on score */
+    @keyframes score-shake {
+
+      0%,
+      100% {
+        transform: translateX(0) scale(1)
+      }
+
+      20% {
+        transform: translateX(-5px) scale(1.05)
+      }
+
+      40% {
+        transform: translateX(5px) scale(1.05)
+      }
+
+      60% {
+        transform: translateX(-4px)
+      }
+
+      80% {
+        transform: translateX(4px)
+      }
+    }
+
+    .score-penalty {
+      color: var(--red) !important;
+      animation: score-shake 0.4s ease;
+    }
+
+    .streak-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--gold-light);
+      border: 2px solid var(--gold);
+      border-radius: 100px;
+      padding: 4px 12px;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--gold);
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      transform: scale(0.8);
+    }
+
+    .streak-badge.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Progress */
+    .progress-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--bg2);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 0.4s ease;
+    }
+
+    /* ── Game Body ── */
+    .game-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.2rem 1rem 1.5rem;
+      gap: 1.2rem;
+      overflow-y: auto;
+    }
+
+    /* ── Card Stage ── */
+    .card-stage {
+      position: relative;
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.7rem;
+    }
+
+    .card-counter {
+      font-size: 0.78rem;
+      color: var(--ink2);
+      font-weight: 500;
+    }
+
+    .draggable-card {
+      width: 100%;
+      background: #fff;
+      border: 2.5px solid var(--bg2);
+      border-radius: var(--radius);
+      padding: 1.4rem 1.6rem;
+      box-shadow: var(--card-shadow);
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      text-align: center;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .draggable-card:hover {
+      transform: translateY(-3px) rotate(-0.5deg);
+      box-shadow: 0 8px 32px rgba(26, 18, 8, 0.18);
+    }
+
+    .draggable-card.dragging {
+      cursor: grabbing;
+      transform: scale(1.05) rotate(2deg);
+      box-shadow: 0 16px 48px rgba(26, 18, 8, 0.25);
+      z-index: 1000;
+      border-color: var(--accent);
+      opacity: 0.92;
+    }
+
+    @keyframes card-enter {
+      from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.88);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .card-enter {
+      animation: card-enter 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    @keyframes bounce-back {
+      0% {
+        transform: translateX(0)
+      }
+
+      20% {
+        transform: translateX(-14px) rotate(-3deg)
+      }
+
+      40% {
+        transform: translateX(14px) rotate(3deg)
+      }
+
+      60% {
+        transform: translateX(-9px) rotate(-2deg)
+      }
+
+      80% {
+        transform: translateX(9px) rotate(2deg)
+      }
+
+      100% {
+        transform: translateX(0) rotate(0)
+      }
+    }
+
+    .bounce-back {
+      animation: bounce-back 0.5s ease forwards;
+      border-color: var(--red) !important;
+    }
+
+    .card-icon {
+      font-size: 2.4rem;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .card-text {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.45;
+      color: var(--ink);
+    }
+
+    .card-hint {
+      font-size: 0.76rem;
+      color: var(--ink2);
+      margin-top: 0.4rem;
+      opacity: 0.55;
+    }
+
+    /* ── Keyboard strip ── */
+    .kb-strip {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .kb-key {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--bg2);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 0.74rem;
+      font-weight: 500;
+      color: var(--ink2);
+      border: 1.5px solid rgba(26, 18, 8, 0.1);
+    }
+
+    .kb-key kbd {
+      background: #fff;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border: 1.5px solid rgba(26, 18, 8, 0.15);
+      font-family: 'Syne', sans-serif;
+    }
+
+    /* ── Baskets ── */
+    .baskets-row {
+      display: flex;
+      gap: 0.9rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .basket {
+      flex: 1;
+      min-width: 120px;
+      max-width: 210px;
+      background: #fff;
+      border: 2.5px dashed rgba(26, 18, 8, 0.14);
+      border-radius: var(--radius);
+      padding: 1.1rem 0.9rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .basket:hover,
+    .basket.drag-over {
+      border-color: var(--accent);
+      background: rgba(212, 82, 42, 0.04);
+      transform: scale(1.03);
+    }
+
+    .basket.correct-flash {
+      border-color: var(--green);
+      background: var(--green-light);
+      animation: correct-flash 0.5s ease;
+    }
+
+    .basket.wrong-flash {
+      border-color: var(--red);
+      background: var(--red-light);
+      animation: wrong-flash 0.3s ease;
+    }
+
+    @keyframes correct-flash {
+      0% {
+        transform: scale(1)
+      }
+
+      40% {
+        transform: scale(1.06)
+      }
+
+      100% {
+        transform: scale(1)
+      }
+    }
+
+    @keyframes wrong-flash {
+
+      0%,
+      100% {
+        transform: scale(1)
+      }
+
+      50% {
+        transform: scale(0.96)
+      }
+    }
+
+    .basket-emoji {
+      font-size: 1.9rem;
+    }
+
+    .basket-label {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .basket-sub {
+      font-size: 0.68rem;
+      text-align: center;
+      color: var(--ink2);
+      opacity: 0.7;
+      line-height: 1.35;
+    }
+
+    .basket-key-hint {
+      position: absolute;
+      top: 7px;
+      right: 8px;
+      background: var(--bg2);
+      border-radius: 5px;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: var(--ink2);
+      border: 1.5px solid rgba(26, 18, 8, 0.1);
+    }
+
+    .basket-score-pop {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Syne', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--green);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    @keyframes score-pop {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(0.5)
+      }
+
+      60% {
+        opacity: 1;
+        transform: translate(-50%, -80%) scale(1.2)
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -110%) scale(1)
+      }
+    }
+
+    .score-pop-anim {
+      animation: score-pop 0.7s ease forwards;
+    }
+
+    /* ════════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════════ */
+    #feedback-toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--ink);
+      color: #fff;
+      padding: 11px 22px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      max-width: 380px;
+      width: calc(100% - 2rem);
+      text-align: center;
+      z-index: 9999;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s;
+      opacity: 0;
+      line-height: 1.5;
+      pointer-events: none;
+    }
+
+    #feedback-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    #feedback-toast.correct {
+      background: var(--green);
+    }
+
+    #feedback-toast.wrong {
+      background: var(--red);
+    }
+
+    /* ════════════════════════════════════════════════
+   LEVEL COMPLETE SCREEN
+════════════════════════════════════════════════ */
+    #level-complete-screen {
+      align-items: center;
+      justify-content: flex-start;
+      padding: 2rem 1.5rem;
+      gap: 1.2rem;
+      text-align: center;
+      overflow-y: auto;
+    }
+
+    .result-trophy {
+      font-size: 4.5rem;
+      margin-top: 1rem;
+    }
+
+    .result-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+    }
+
+    .result-stats {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .stat-box {
+      background: #fff;
+      border: 2px solid var(--bg2);
+      border-radius: var(--radius);
+      padding: 1rem 1.6rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .stat-box .num {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .stat-box .lbl {
+      font-size: 0.76rem;
+      color: var(--ink2);
+      font-weight: 500;
+    }
+
+    /* Leaderboard on level-complete */
+    .leaderboard-wrap {
+      width: 100%;
+      max-width: 460px;
+      background: #fff;
+      border: 2px solid var(--bg2);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+    }
+
+    .lb-header {
+      padding: 0.8rem 1.2rem;
+      background: var(--bg2);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink2);
+    }
+
+    .lb-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.2rem;
+      border-bottom: 1px solid var(--bg2);
+      gap: 0.5rem;
+    }
+
+    .lb-row:last-child {
+      border-bottom: none;
+    }
+
+    .lb-row.active-row {
+      background: rgba(212, 82, 42, 0.05);
+    }
+
+    .lb-rank {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+      width: 1.8rem;
+    }
+
+    .lb-group-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 100px;
+      flex: 1;
+    }
+
+    .lb-pts {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+    }
+
+    .lb-pts.not-played {
+      color: var(--ink2);
+      opacity: 0.35;
+      font-weight: 500;
+      font-size: 0.8rem;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* ════════════════════════════════════════════════
+   SKIP INDICATOR
+════════════════════════════════════════════════ */
+    .skip-indicator {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: var(--red);
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      padding: 12px 28px;
+      border-radius: 100px;
+      z-index: 9997;
+      pointer-events: none;
+      box-shadow: 0 8px 32px rgba(192, 57, 43, 0.4);
+    }
+
+    @keyframes skip-pop {
+      0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+      }
+
+      35% {
+        transform: translate(-50%, -50%) scale(1.15);
+        opacity: 1;
+      }
+
+      70% {
+        transform: translate(-50%, -60%) scale(1);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translate(-50%, -80%) scale(0.8);
+        opacity: 0;
+      }
+    }
+
+    .skip-pop-anim {
+      animation: skip-pop 0.65s ease forwards;
+    }
+
+    /* ════════════════════════════════════════════════
+   PEMBAHASAN PANEL
+════════════════════════════════════════════════ */
+    .pembahasan-wrap {
+      width: 100%;
+      max-width: 560px;
+      background: #fff;
+      border: 2px solid var(--red-light);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+    }
+
+    .pembahasan-header {
+      padding: 0.75rem 1.2rem;
+      background: var(--red-light);
+      border-bottom: 2px solid rgba(192, 57, 43, 0.15);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--red);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pembahasan-empty {
+      padding: 1.2rem 1.2rem;
+      font-size: 0.9rem;
+      color: var(--green);
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .pembahasan-item {
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid var(--bg2);
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .pembahasan-item:last-child {
+      border-bottom: none;
+    }
+
+    .pembahasan-q {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.4;
+    }
+
+    .pembahasan-q .q-emoji {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .pembahasan-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--green-light);
+      border: 1.5px solid var(--green);
+      color: var(--green);
+      border-radius: 100px;
+      padding: 3px 10px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      font-family: 'Syne', sans-serif;
+    }
+
+    .pembahasan-explanation {
+      font-size: 0.8rem;
+      color: var(--ink2);
+      line-height: 1.6;
+      padding-left: 2px;
+      border-left: 3px solid var(--red-light);
+      padding-left: 10px;
+      margin-top: 2px;
+    }
+
+    /* ════════════════════════════════════════════════
+   FINAL SCREEN
+════════════════════════════════════════════════ */
+    #final-screen {
+      align-items: center;
+      justify-content: flex-start;
+      padding: 2rem 1.5rem;
+      gap: 1.2rem;
+      text-align: center;
+      overflow-y: auto;
+    }
+
+    .confetti-bg {
+      font-size: 4rem;
+      margin-top: 1rem;
+    }
+
+    .final-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 800;
+    }
+
+    .final-podium {
+      width: 100%;
+      max-width: 520px;
+      background: #fff;
+      border: 2px solid var(--bg2);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+    }
+
+    .podium-header {
+      padding: 0.8rem 1.2rem;
+      background: var(--bg2);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink2);
+    }
+
+    .podium-row {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.9rem 1.2rem;
+      border-bottom: 1px solid var(--bg2);
+    }
+
+    .podium-row:last-child {
+      border-bottom: none;
+    }
+
+    .podium-medal {
+      font-size: 1.5rem;
+      width: 2rem;
+      text-align: center;
+    }
+
+    .podium-info {
+      flex: 1;
+      text-align: left;
+    }
+
+    .podium-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .podium-breakdown {
+      font-size: 0.72rem;
+      color: var(--ink2);
+      margin-top: 1px;
+    }
+
+    .podium-total {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+
+    .grade-badge {
+      display: inline-block;
+      padding: 7px 24px;
+      border-radius: 100px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+    }
+
+    /* ════════════════════════════════════════════════
+   CONFETTI
+════════════════════════════════════════════════ */
+    .confetti-particle {
+      position: fixed;
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 9998;
+      animation: confetti-fall linear forwards;
+    }
+
+    @keyframes confetti-fall {
+      0% {
+        transform: translateY(-20px) rotate(0deg);
+        opacity: 1
+      }
+
+      100% {
+        transform: translateY(110vh) rotate(720deg);
+        opacity: 0
+      }
+    }
+
+    /* ════════════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════════════ */
+    @media (max-width:580px) {
+      .baskets-row {
+        gap: 0.5rem;
+      }
+
+      .basket {
+        min-width: 80px;
+        padding: 0.8rem 0.5rem;
+      }
+
+      .basket-emoji {
+        font-size: 1.5rem;
+      }
+
+      .basket-label {
+        font-size: 0.72rem;
+      }
+
+      .basket-sub {
+        display: none;
+      }
+
+      .hud {
+        gap: 0.9rem;
+      }
+
+      .card-text {
+        font-size: 0.93rem;
+      }
+
+      .game-header {
+        padding: 0.6rem 0.9rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ═══════════════════════ INTRO / GROUP SELECT ═══════════════════════ -->
+  <div id="intro-screen" class="screen active">
+    <div class="intro-badge">🎓 Game Edukasi PDB · Pendekatan Pengeluaran</div>
+    <h1 class="intro-title">Drag & Drop:<br><span>Keranjang PDB</span></h1>
+    <p class="intro-sub">Klasifikasikan komponen PDB Pendekatan Pengeluaran ke keranjang yang tepat. Berlomba antar
+      kelompok, raih skor tertinggi!</p>
+
+    <div class="rules-strip">
+      <div class="rule-pill bonus">✅ Benar: +10 poin</div>
+      <div class="rule-pill penalty">❌ Salah: −5 poin</div>
+      <div class="rule-pill time">⏱ 45 detik / level</div>
+      <div class="rule-pill" style="border-color:var(--gold);color:var(--gold);background:var(--gold-light)">🔥 Combo
+        streak bonus</div>
+    </div>
+
+    <div class="group-section">
+      <div class="group-section-label">Pilih Kelompok yang Sedang Bermain</div>
+      <div class="group-grid">
+        <button class="group-btn" data-group="1">
+          <span class="group-check">✔</span>
+          <span class="group-btn-emoji">🔴</span>
+          <span class="group-btn-name">Kelompok 1</span>
+          <span class="group-btn-score" id="gscore-1">Belum bermain</span>
+        </button>
+        <button class="group-btn" data-group="2">
+          <span class="group-check">✔</span>
+          <span class="group-btn-emoji">🔵</span>
+          <span class="group-btn-name">Kelompok 2</span>
+          <span class="group-btn-score" id="gscore-2">Belum bermain</span>
+        </button>
+        <button class="group-btn" data-group="3">
+          <span class="group-check">✔</span>
+          <span class="group-btn-emoji">🟢</span>
+          <span class="group-btn-name">Kelompok 3</span>
+          <span class="group-btn-score" id="gscore-3">Belum bermain</span>
+        </button>
+        <button class="group-btn" data-group="4">
+          <span class="group-check">✔</span>
+          <span class="group-btn-emoji">🟣</span>
+          <span class="group-btn-name">Kelompok 4</span>
+          <span class="group-btn-score" id="gscore-4">Belum bermain</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="level-preview">
+      <div class="level-card">
+        <div class="level-num">Level 1</div>
+        <h3>Klasifikasi Konsumsi</h3>
+        <p>PK-RT, PK-LNPRT, PK-P (COICOP / COPNI / COFOG)</p>
+      </div>
+      <div class="level-card">
+        <div class="level-num">Level 2</div>
+        <h3>Aset Tetap vs Inventori</h3>
+        <p>PMTB — biologis, konstruksi, militer, software</p>
+      </div>
+      <div class="level-card">
+        <div class="level-num">Level 3</div>
+        <h3>Residen vs Non-Residen</h3>
+        <p>Pusat kepentingan ekonomis untuk ekspor-impor</p>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="start-btn" disabled>▶ Mulai Bermain</button>
+    <p class="keyboard-hint">🖱️ Drag &amp; Drop &nbsp;·&nbsp; 👆 Touch &nbsp;·&nbsp; ⌨️ Tekan angka 1 / 2 / 3 untuk
+      pilih keranjang</p>
+  </div>
+
+  <!-- ═══════════════════════ GAME SCREEN ═══════════════════════ -->
+  <div id="game-screen" class="screen">
+    <header class="game-header">
+      <div class="game-header-left">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:1px;">
+          <span class="active-group-tag" id="active-group-tag"></span>
+          <span class="level-indicator" id="level-label">Level 1 / 3</span>
+        </div>
+        <span class="level-title" id="level-title-text">Klasifikasi Konsumsi</span>
+      </div>
+      <div class="hud">
+        <div class="hud-item">
+          <span class="hud-label">Skor</span>
+          <span class="hud-value" id="score-val">0</span>
+        </div>
+        <div id="streak-badge" class="streak-badge">🔥 <span id="streak-num">0</span>x</div>
+        <div class="hud-item">
+          <span class="hud-label">Waktu</span>
+          <span class="hud-value" id="timer-val">45</span>
+        </div>
+      </div>
+    </header>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+
+    <main class="game-body">
+      <div class="card-stage">
+        <span class="card-counter" id="card-counter">Kartu 1 / 6</span>
+        <div class="draggable-card card-enter" id="draggable-card">
+          <span class="card-icon" id="card-icon">🛒</span>
+          <div class="card-text" id="card-text">Memuat...</div>
+          <div class="card-hint" id="card-hint">Seret ke keranjang yang tepat ↓</div>
+        </div>
+      </div>
+
+      <div class="kb-strip" id="kb-strip"></div>
+      <div class="baskets-row" id="baskets-row"></div>
+    </main>
+  </div>
+
+  <!-- ═══════════════════════ LEVEL COMPLETE ═══════════════════════ -->
+  <div id="level-complete-screen" class="screen">
+    <div class="result-trophy" id="result-trophy">🎉</div>
+    <div class="result-title" id="result-title">Level Selesai!</div>
+    <p id="result-msg" style="color:var(--ink2);font-size:0.93rem;max-width:360px;line-height:1.7;"></p>
+
+    <div class="result-stats">
+      <div class="stat-box">
+        <div class="num" id="res-score">0</div>
+        <div class="lbl">Skor Sesi Ini</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" id="res-streak">0</div>
+        <div class="lbl">Streak Terbaik</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" id="res-time">0s</div>
+        <div class="lbl">Sisa Waktu</div>
+      </div>
+    </div>
+
+    <!-- Pembahasan (review wrong answers) -->
+    <div class="pembahasan-wrap" id="pembahasan-wrap" style="display:none">
+      <div class="pembahasan-header">📖 Pembahasan Soal yang Terlewat</div>
+      <div id="pembahasan-rows"></div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="leaderboard-wrap" id="lb-wrap" style="display:none">
+      <div class="lb-header">📊 Papan Skor Sementara</div>
+      <div id="lb-rows"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-outline" id="replay-level-btn">↺ Ulangi Level Ini</button>
+      <button class="btn-primary" id="next-level-btn">Level Berikutnya →</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ FINAL SCREEN ═══════════════════════ -->
+  <div id="final-screen" class="screen">
+    <div class="confetti-bg">🏆</div>
+    <div class="final-title">Semua Level Selesai!</div>
+    <div class="grade-badge" id="grade-badge"></div>
+
+    <div class="final-podium" id="final-podium">
+      <div class="podium-header">🏆 Peringkat Akhir Semua Kelompok</div>
+      <div id="podium-rows"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-outline" id="back-intro-btn">← Kembali ke Awal</button>
+      <button class="btn-primary" id="restart-btn">🔄 Reset & Main Lagi</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="feedback-toast"></div>
+
+  <script>
+    /* ══════════════════════════════════════════════════════
+       HELPERS
+    ══════════════════════════════════════════════════════ */
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GROUP CONFIG
+    ══════════════════════════════════════════════════════ */
+    const GROUP_CONFIG = {
+      1: { name: 'Kelompok 1', emoji: '🔴', color: 'var(--g1)', bg: 'var(--g1-light)' },
+      2: { name: 'Kelompok 2', emoji: '🔵', color: 'var(--g2)', bg: 'var(--g2-light)' },
+      3: { name: 'Kelompok 3', emoji: '🟢', color: 'var(--g3)', bg: 'var(--g3-light)' },
+      4: { name: 'Kelompok 4', emoji: '🟣', color: 'var(--g4)', bg: 'var(--g4-light)' },
+    };
+
+    /* ══════════════════════════════════════════════════════
+       LEVEL / CARD DATABASE
+    ══════════════════════════════════════════════════════ */
+    const LEVEL_DEFS = [
+      {
+        id: 1,
+        title: "Klasifikasi Konsumsi",
+        description: "Klasifikasikan pengeluaran konsumsi ke tiga kelompok utama berdasarkan pelaku",
+        duration: 45,
+        baskets: [
+          { id: "pk-rt", label: "PK-RT", sub: "Rumah Tangga\n(COICOP)", emoji: "🏠" },
+          { id: "pk-lnprt", label: "PK-LNPRT", sub: "Lembaga Non-Profit\n(COPNI)", emoji: "🤲" },
+          { id: "pk-p", label: "PK-P", sub: "Pemerintah\n(COFOG)", emoji: "🏛️" },
+        ],
+        cards: [
+          { text: "Beli tiket kereta api", answer: "pk-rt", emoji: "🚂", feedback_wrong: "Tiket kereta api adalah pengeluaran individu rumah tangga → PK-RT (COICOP)!" },
+          { text: "Belanja pakaian dan alas kaki", answer: "pk-rt", emoji: "👗", feedback_wrong: "Belanja pakaian adalah pengeluaran konsumsi rumah tangga → PK-RT (COICOP)!" },
+          { text: "Perkiraan nilai barang dari barter rumah tangga", answer: "pk-rt", emoji: "🔄", feedback_wrong: "Imputasi barter rumah tangga tetap dicatat sebagai PK-RT — konsumsi non-tunai!" },
+          { text: "Pengeluaran operasional Panti Asuhan", answer: "pk-lnprt", emoji: "🏡", feedback_wrong: "Panti Asuhan adalah LNPRT pelayanan sosial → PK-LNPRT (COPNI)!" },
+          { text: "Pengeluaran operasional Partai Politik", answer: "pk-lnprt", emoji: "🗳️", feedback_wrong: "Partai Politik termasuk LNPRT → pengeluarannya masuk PK-LNPRT (COPNI)!" },
+          { text: "Pengeluaran Serikat Buruh / Organisasi Profesi", answer: "pk-lnprt", emoji: "✊", feedback_wrong: "Serikat Buruh dan Org. Profesi adalah LNPRT → PK-LNPRT (COPNI)!" },
+          { text: "Jasa pertahanan dan keamanan oleh TNI/Polri (Kolektif)", answer: "pk-p", emoji: "🛡️", feedback_wrong: "Jasa pertahanan kolektif oleh TNI/Polri adalah konsumsi kolektif pemerintah → PK-P!" },
+          { text: "Pelayanan kesehatan di Rumah Sakit Pemerintah (Individu)", answer: "pk-p", emoji: "🏥", feedback_wrong: "RS Pemerintah menyediakan layanan individu yang dibiayai pemerintah → PK-P (COFOG)!" },
+        ]
+      },
+      {
+        id: 2,
+        title: "Aset Tetap vs Inventori",
+        description: "Bedakan PMTB (Aset Tetap) dan Inventori berdasarkan sifat penggunaan aset",
+        duration: 45,
+        baskets: [
+          { id: "aset-tetap", label: "Aset Tetap", sub: "PMTB — digunakan\nberkali-kali", emoji: "🏗️" },
+          { id: "inventori", label: "Inventori", sub: "Sekali pakai /\nbelum terjual", emoji: "📦" },
+        ],
+        cards: [
+          { text: "Sapi perah penghasil susu", answer: "aset-tetap", emoji: "🐄", feedback_wrong: "Sapi perah menghasilkan susu berkali-kali → Cultivated Biological Resources → Aset Tetap!" },
+          { text: "Pohon sawit penghasil buah berulang (CBR)", answer: "aset-tetap", emoji: "🌴", feedback_wrong: "Pohon sawit berbuah berulang kali → Cultivated Biological Resources (CBR) → Aset Tetap!" },
+          { text: "Pohon jati dan ayam potong (Sekali panen)", answer: "inventori", emoji: "🐔", feedback_wrong: "Dipanen sekali habis (single-use biological) → masuk Inventori, bukan Aset Tetap!" },
+          { text: "Bangunan setengah jadi (Work in Progress) belum terjual", answer: "inventori", emoji: "🏚️", feedback_wrong: "WIP bangunan belum selesai & belum terjual = stok konstruksi → Inventori!" },
+          { text: "Sistem persenjataan misil balistik berdaya ledak tinggi", answer: "aset-tetap", emoji: "🚀", feedback_wrong: "SNA 2008: Senjata berdaya ledak tinggi diklasifikasikan Aset Tetap Militer!" },
+          { text: "Senjata sekali pakai seperti amunisi dan bom", answer: "inventori", emoji: "💣", feedback_wrong: "Amunisi & bom adalah habis pakai sekali tembak → Inventori Militer!" },
+          { text: "Pengembangan Software komputer & Database", answer: "aset-tetap", emoji: "💻", feedback_wrong: "Software & database yang dikembangkan sendiri adalah Aset Tak Berwujud → Aset Tetap!" },
+          { text: "Barang dagangan di minimarket untuk dijual kembali", answer: "inventori", emoji: "🛒", feedback_wrong: "Barang dagangan yang belum terjual adalah stok pedagang → Inventori!" },
+        ]
+      },
+      {
+        id: 3,
+        title: "Residen vs Non-Residen",
+        description: "Tentukan status residensial unit institusi berdasarkan pusat kepentingan ekonomisnya",
+        duration: 45,
+        baskets: [
+          { id: "residen", label: "Residen", sub: "Pusat kepentingan\ndi Indonesia", emoji: "🪪" },
+          { id: "non-residen", label: "Non-Residen", sub: "Pusat kepentingan\ndi luar negeri", emoji: "✈️" },
+        ],
+        cards: [
+          { text: "Pelajar Indonesia yang studi di luar negeri", answer: "residen", emoji: "🎒", feedback_wrong: "Pelajar Indonesia di LN tetap Residen Indonesia — pusat kepentingan ekonomisnya tetap di Indonesia!" },
+          { text: "Diplomat Asing beserta pegawai KBLN di Indonesia", answer: "non-residen", emoji: "🤵", feedback_wrong: "Diplomat & staf Kedubes Asing dikecualikan dari aturan 1 tahun → tetap Non-Residen!" },
+          { text: "Perusahaan asing yang berproduksi di Indonesia > 1 tahun", answer: "residen", emoji: "🏭", feedback_wrong: "Operasi >1 tahun di Indonesia = pusat kepentingan ekonomis ada di Indonesia → Residen!" },
+          { text: "Pasien asing yang berobat di Indonesia", answer: "non-residen", emoji: "🩺", feedback_wrong: "Pasien asing datang sementara, pusat kepentingannya di negara asal → Non-Residen!" },
+          { text: "Diplomat Indonesia di KBRI luar negeri", answer: "residen", emoji: "🇮🇩", feedback_wrong: "Diplomat Indonesia di luar negeri tetap Residen Indonesia — sama seperti pelajar yang studi ke LN!" },
+        ]
+      }
+    ];
+
+    /* ══════════════════════════════════════════════════════
+       PERSISTENT SCOREBOARD (per session)
+    ══════════════════════════════════════════════════════ */
+    // scoreboard[groupId] = { totalScore, levelScores:[], levelStreaks:[], played:bool }
+    const scoreboard = {
+      1: { totalScore: 0, levelScores: [], levelStreaks: [], played: false },
+      2: { totalScore: 0, levelScores: [], levelStreaks: [], played: false },
+      3: { totalScore: 0, levelScores: [], levelStreaks: [], played: false },
+      4: { totalScore: 0, levelScores: [], levelStreaks: [], played: false },
+    };
+
+    /* ══════════════════════════════════════════════════════
+       GAME STATE
+    ══════════════════════════════════════════════════════ */
+    let activeGroup = null; // 1-4
+    let LEVELS = [];        // shuffled copy for current session
+
+    let state = {
+      currentLevel: 0,
+      currentCardIndex: 0,
+      score: 0,
+      streak: 0,
+      bestStreak: 0,
+      timerVal: 45,
+      timerInterval: null,
+      levelScores: [],
+      levelBestStreaks: [],
+      levelTimeLeft: [],
+      wrongCards: [],        // cards answered incorrectly this level
+      skipping: false,       // guard: prevent double-answer during skip delay
+      isDragging: false,
+      dragOffsetX: 0, dragOffsetY: 0,
+    };
+
+    /* ══════════════════════════════════════════════════════
+       DOM REFS
+    ══════════════════════════════════════════════════════ */
+    const screens = {
+      intro: document.getElementById('intro-screen'),
+      game: document.getElementById('game-screen'),
+      levelComplete: document.getElementById('level-complete-screen'),
+      final: document.getElementById('final-screen'),
+    };
+
+    const $card = document.getElementById('draggable-card');
+    const $cardIcon = document.getElementById('card-icon');
+    const $cardText = document.getElementById('card-text');
+    const $cardHint = document.getElementById('card-hint');
+    const $cardCounter = document.getElementById('card-counter');
+    const $scoreVal = document.getElementById('score-val');
+    const $timerVal = document.getElementById('timer-val');
+    const $streakBadge = document.getElementById('streak-badge');
+    const $streakNum = document.getElementById('streak-num');
+    const $levelLabel = document.getElementById('level-label');
+    const $levelTitle = document.getElementById('level-title-text');
+    const $progressFill = document.getElementById('progress-fill');
+    const $basketsRow = document.getElementById('baskets-row');
+    const $kbStrip = document.getElementById('kb-strip');
+    const $toast = document.getElementById('feedback-toast');
+    const $agTag = document.getElementById('active-group-tag');
+
+    /* ══════════════════════════════════════════════════════
+       SCREEN MANAGEMENT
+    ══════════════════════════════════════════════════════ */
+    function showScreen(name) {
+      Object.values(screens).forEach(s => s.classList.remove('active'));
+      screens[name].classList.add('active');
+      window.scrollTo(0, 0);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       TOAST
+    ══════════════════════════════════════════════════════ */
+    let toastTimeout = null;
+    function showToast(msg, type = 'correct') {
+      $toast.textContent = msg;
+      $toast.className = 'show ' + type;
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => { $toast.className = ''; }, 2800);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCOREBOARD UI (intro group buttons)
+    ══════════════════════════════════════════════════════ */
+    function refreshGroupUI() {
+      for (let g = 1; g <= 4; g++) {
+        const el = document.getElementById('gscore-' + g);
+        if (scoreboard[g].played) {
+          el.textContent = scoreboard[g].totalScore + ' poin';
+        } else {
+          el.textContent = 'Belum bermain';
+        }
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       LEADERBOARD RENDER (level-complete + final)
+    ══════════════════════════════════════════════════════ */
+    function renderLeaderboard(containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+
+      const sorted = [1, 2, 3, 4]
+        .map(g => ({ g, s: scoreboard[g].totalScore, played: scoreboard[g].played }))
+        .sort((a, b) => {
+          if (!a.played && !b.played) return 0;
+          if (!a.played) return 1;
+          if (!b.played) return -1;
+          return b.s - a.s;
+        });
+
+      sorted.forEach((item, idx) => {
+        const cfg = GROUP_CONFIG[item.g];
+        const isActive = item.g === activeGroup;
+        const row = document.createElement('div');
+        row.className = 'lb-row' + (isActive ? ' active-row' : '');
+        const rankEmoji = idx === 0 && item.played ? '🥇' : idx === 1 && item.played ? '🥈' : idx === 2 && item.played ? '🥉' : `${idx + 1}.`;
+        row.innerHTML = `
+      <div class="lb-rank">${rankEmoji}</div>
+      <div class="lb-group-tag" style="background:${cfg.bg};color:${cfg.color}">
+        ${cfg.emoji} ${cfg.name}${isActive ? ' ← kamu' : ''}
+      </div>
+      <div class="lb-pts ${item.played ? '' : 'not-played'}">${item.played ? item.s + ' pts' : '—'}</div>
+    `;
+        container.appendChild(row);
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       START GAME FOR ACTIVE GROUP
+    ══════════════════════════════════════════════════════ */
+    function startGame() {
+      // Build shuffled levels with shuffled cards
+      LEVELS = LEVEL_DEFS.map(ldef => ({
+        ...ldef,
+        cards: shuffle(ldef.cards)
+      }));
+
+      state = {
+        currentLevel: 0,
+        currentCardIndex: 0,
+        score: 0, streak: 0, bestStreak: 0,
+        timerVal: LEVELS[0].duration,
+        timerInterval: null,
+        levelScores: [], levelBestStreaks: [], levelTimeLeft: [],
+        wrongCards: [],
+        skipping: false,
+        isDragging: false,
+        dragOffsetX: 0, dragOffsetY: 0,
+      };
+
+      $scoreVal.textContent = '0';
+      $timerVal.classList.remove('urgent');
+
+      // Update group tag in header
+      const cfg = GROUP_CONFIG[activeGroup];
+      $agTag.textContent = cfg.emoji + ' ' + cfg.name;
+      $agTag.style.cssText = `background:${cfg.bg};color:${cfg.color};`;
+
+      showScreen('game');
+      loadLevel(0);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       TIMER
+    ══════════════════════════════════════════════════════ */
+    function startTimer() {
+      clearInterval(state.timerInterval);
+      state.timerInterval = setInterval(() => {
+        state.timerVal--;
+        $timerVal.textContent = state.timerVal;
+        if (state.timerVal <= 12) $timerVal.classList.add('urgent');
+        else $timerVal.classList.remove('urgent');
+        if (state.timerVal <= 0) { clearInterval(state.timerInterval); endLevel(true); }
+      }, 1000);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       LOAD LEVEL
+    ══════════════════════════════════════════════════════ */
+    function loadLevel(idx) {
+      const level = LEVELS[idx];
+      state.currentCardIndex = 0;
+      state.streak = 0;
+      state.timerVal = level.duration;
+      state.wrongCards = [];
+      state.skipping = false;
+
+      $timerVal.textContent = level.duration;
+      $timerVal.classList.remove('urgent');
+      $levelLabel.textContent = `Level ${level.id} / ${LEVELS.length}`;
+      $levelTitle.textContent = level.title;
+      $streakBadge.classList.remove('visible');
+
+      renderBaskets(level);
+      renderCard(level);
+      updateProgress(level);
+      startTimer();
+    }
+
+    /* ══════════════════════════════════════════════════════
+       RENDER BASKETS
+    ══════════════════════════════════════════════════════ */
+    function renderBaskets(level) {
+      $basketsRow.innerHTML = '';
+      $kbStrip.innerHTML = '';
+
+      level.baskets.forEach((b, i) => {
+        const div = document.createElement('div');
+        div.className = 'basket';
+        div.id = 'basket-' + b.id;
+        div.dataset.basketId = b.id;
+        div.innerHTML = `
+      <div class="basket-key-hint">${i + 1}</div>
+      <div class="basket-emoji">${b.emoji}</div>
+      <div class="basket-label">${b.label}</div>
+      <div class="basket-sub">${b.sub.replace(/\n/g, '<br>')}</div>
+      <div class="basket-score-pop" id="pop-${b.id}">+10</div>
+    `;
+        div.addEventListener('dragover', e => { e.preventDefault(); div.classList.add('drag-over'); });
+        div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+        div.addEventListener('drop', e => { e.preventDefault(); div.classList.remove('drag-over'); handleDrop(b.id); });
+        div.addEventListener('click', () => handleDrop(b.id));
+        $basketsRow.appendChild(div);
+
+        const kspan = document.createElement('div');
+        kspan.className = 'kb-key';
+        kspan.innerHTML = `<kbd>${i + 1}</kbd> ${b.label}`;
+        $kbStrip.appendChild(kspan);
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       RENDER CARD
+    ══════════════════════════════════════════════════════ */
+    function renderCard(level) {
+      if (state.currentCardIndex >= level.cards.length) { endLevel(false); return; }
+      const card = level.cards[state.currentCardIndex];
+      $cardIcon.textContent = card.emoji;
+      $cardText.textContent = card.text;
+      $cardHint.textContent = 'Seret ke keranjang yang tepat ↓';
+      $cardCounter.textContent = `Kartu ${state.currentCardIndex + 1} / ${level.cards.length}`;
+      $card.className = 'draggable-card card-enter';
+      $card.draggable = true;
+      setupDragEvents();
+    }
+
+    function updateProgress(level) {
+      const pct = (state.currentCardIndex / level.cards.length) * 100;
+      $progressFill.style.width = pct + '%';
+    }
+
+    /* ══════════════════════════════════════════════════════
+       ANSWER LOGIC
+    ══════════════════════════════════════════════════════ */
+    // Show a floating skip indicator in the center of screen
+    function showSkipIndicator() {
+      let el = document.getElementById('skip-indicator');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'skip-indicator';
+        el.className = 'skip-indicator';
+        el.textContent = '⏭ Dilewati!';
+        document.body.appendChild(el);
+      }
+      el.classList.remove('skip-pop-anim');
+      void el.offsetWidth;
+      el.classList.add('skip-pop-anim');
+    }
+
+    function handleDrop(basketId) {
+      if (state.skipping) return; // guard during skip animation
+      const level = LEVELS[state.currentLevel];
+      const card = level.cards[state.currentCardIndex];
+
+      if (basketId === card.answer) {
+        // CORRECT: +10 + combo bonus
+        const streakBonus = state.streak >= 2 ? state.streak * 2 : 0;
+        const pts = 10 + streakBonus;
+        state.score += pts;
+        state.streak++;
+        if (state.streak > state.bestStreak) state.bestStreak = state.streak;
+        $scoreVal.textContent = state.score;
+
+        if (state.streak >= 2) {
+          $streakNum.textContent = state.streak;
+          $streakBadge.classList.add('visible');
+        }
+
+        const basketEl = document.getElementById('basket-' + basketId);
+        basketEl.classList.add('correct-flash');
+        setTimeout(() => basketEl.classList.remove('correct-flash'), 600);
+
+        const popEl = document.getElementById('pop-' + basketId);
+        popEl.textContent = '+' + pts + (streakBonus ? ' 🔥' : '');
+        popEl.style.color = 'var(--green)';
+        popEl.classList.add('score-pop-anim');
+        setTimeout(() => popEl.classList.remove('score-pop-anim'), 800);
+
+        showToast(streakBonus > 0
+          ? `✅ Benar! Combo x${state.streak} — +${pts} poin!`
+          : `✅ Benar! +${pts} poin`, 'correct');
+
+        state.currentCardIndex++;
+        updateProgress(level);
+        setTimeout(() => renderCard(level), 400);
+
+      } else {
+        // WRONG: -5 penalty, then SKIP to next card
+        state.score = Math.max(0, state.score - 5);
+        state.streak = 0;
+        $streakBadge.classList.remove('visible');
+        $scoreVal.textContent = state.score;
+        state.skipping = true;
+
+        // Remember this card for pembahasan
+        const correctBasket = level.baskets.find(b => b.id === card.answer);
+        state.wrongCards.push({
+          emoji: card.emoji,
+          text: card.text,
+          correctLabel: correctBasket ? correctBasket.label : card.answer,
+          explanation: card.feedback_wrong,
+        });
+
+        // Penalty score shake (red)
+        $scoreVal.classList.remove('score-penalty');
+        void $scoreVal.offsetWidth;
+        $scoreVal.classList.add('score-penalty');
+        setTimeout(() => $scoreVal.classList.remove('score-penalty'), 450);
+
+        const basketEl = document.getElementById('basket-' + basketId);
+        basketEl.classList.add('wrong-flash');
+        setTimeout(() => basketEl.classList.remove('wrong-flash'), 400);
+
+        // -5 pop on wrong basket
+        const popEl = document.getElementById('pop-' + basketId);
+        popEl.textContent = '−5';
+        popEl.style.color = 'var(--red)';
+        popEl.classList.add('score-pop-anim');
+        setTimeout(() => popEl.classList.remove('score-pop-anim'), 800);
+
+        $card.classList.add('bounce-back');
+
+        // Show toast then skip after delay
+        showToast('❌ Salah! Soal dilewati — lihat pembahasan di akhir.', 'wrong');
+        showSkipIndicator();
+
+        setTimeout(() => {
+          $card.classList.remove('bounce-back');
+          state.skipping = false;
+          state.currentCardIndex++;
+          updateProgress(level);
+          renderCard(level);
+        }, 1400);
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       DRAG EVENTS
+    ══════════════════════════════════════════════════════ */
+    function setupDragEvents() {
+      $card.addEventListener('dragstart', onDragStart);
+      $card.addEventListener('dragend', onDragEnd);
+      $card.addEventListener('touchstart', onTouchStart, { passive: false });
+      $card.addEventListener('touchmove', onTouchMove, { passive: false });
+      $card.addEventListener('touchend', onTouchEnd);
+    }
+
+    function onDragStart(e) { $card.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; }
+    function onDragEnd() { $card.classList.remove('dragging'); }
+
+    let touchClone = null;
+
+    function onTouchStart(e) {
+      const t = e.touches[0];
+      const r = $card.getBoundingClientRect();
+      state.dragOffsetX = t.clientX - r.left;
+      state.dragOffsetY = t.clientY - r.top;
+      touchClone = $card.cloneNode(true);
+      touchClone.style.cssText = `
+    position:fixed; width:${r.width}px;
+    left:${r.left}px; top:${r.top}px;
+    z-index:9999; pointer-events:none;
+    opacity:0.92; transform:rotate(2deg) scale(1.04);
+    box-shadow:0 16px 48px rgba(26,18,8,0.25);
+  `;
+      document.body.appendChild(touchClone);
+      e.preventDefault();
+    }
+
+    function onTouchMove(e) {
+      if (!touchClone) return;
+      const t = e.touches[0];
+      touchClone.style.left = (t.clientX - state.dragOffsetX) + 'px';
+      touchClone.style.top = (t.clientY - state.dragOffsetY) + 'px';
+      document.querySelectorAll('.basket').forEach(b => b.classList.remove('drag-over'));
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      const basket = el && el.closest('.basket');
+      if (basket) basket.classList.add('drag-over');
+      e.preventDefault();
+    }
+
+    function onTouchEnd(e) {
+      if (touchClone) { touchClone.remove(); touchClone = null; }
+      document.querySelectorAll('.basket').forEach(b => b.classList.remove('drag-over'));
+      const t = e.changedTouches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      const basket = el && el.closest('.basket');
+      if (basket) handleDrop(basket.dataset.basketId);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       KEYBOARD
+    ══════════════════════════════════════════════════════ */
+    document.addEventListener('keydown', e => {
+      if (!screens.game.classList.contains('active')) return;
+      const level = LEVELS[state.currentLevel];
+      if (!level) return;
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= level.baskets.length) handleDrop(level.baskets[num - 1].id);
+    });
+
+    /* ══════════════════════════════════════════════════════
+       END LEVEL
+    ══════════════════════════════════════════════════════ */
+    function renderPembahasan() {
+      const wrap = document.getElementById('pembahasan-wrap');
+      const rows = document.getElementById('pembahasan-rows');
+      rows.innerHTML = '';
+
+      if (state.wrongCards.length === 0) {
+        wrap.style.display = 'block';
+        rows.innerHTML = '<div class="pembahasan-empty">🎉 Sempurna! Tidak ada soal yang terlewat.</div>';
+        return;
+      }
+
+      wrap.style.display = 'block';
+      state.wrongCards.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'pembahasan-item';
+        div.innerHTML = `
+      <div class="pembahasan-q">
+        <span class="q-emoji">${item.emoji}</span>
+        <span>${i + 1}. ${item.text}</span>
+      </div>
+      <div>
+        <span class="pembahasan-badge">✅ Jawaban: ${item.correctLabel}</span>
+      </div>
+      <div class="pembahasan-explanation">💡 ${item.explanation}</div>
+    `;
+        rows.appendChild(div);
+      });
+    }
+
+    function endLevel(timeUp) {
+      clearInterval(state.timerInterval);
+      const level = LEVELS[state.currentLevel];
+
+      const prevTotal = state.levelScores.reduce((a, b) => a + b, 0);
+      const thisLevelScore = state.score - prevTotal;
+      state.levelScores.push(thisLevelScore);
+      state.levelBestStreaks.push(state.bestStreak);
+      state.levelTimeLeft.push(state.timerVal);
+
+      // Commit to scoreboard
+      scoreboard[activeGroup].totalScore = state.score;
+      scoreboard[activeGroup].levelScores = [...state.levelScores];
+      scoreboard[activeGroup].levelStreaks = [...state.levelBestStreaks];
+      scoreboard[activeGroup].played = true;
+
+      // Level complete UI
+      document.getElementById('result-trophy').textContent = timeUp ? '⏰' : (state.timerVal > 20 ? '🏆' : '🎉');
+      document.getElementById('result-title').textContent = timeUp ? `Waktu Habis!` : `Level ${level.id} Selesai!`;
+      document.getElementById('result-msg').textContent = timeUp
+        ? 'Waktu habis! Skor tetap tersimpan. Lanjutkan ke level berikutnya atau ulangi.'
+        : level.description;
+      document.getElementById('res-score').textContent = state.score;
+      document.getElementById('res-streak').textContent = state.bestStreak;
+      document.getElementById('res-time').textContent = state.timerVal + 's';
+
+      // Render pembahasan
+      renderPembahasan();
+
+      // Show leaderboard
+      const lbWrap = document.getElementById('lb-wrap');
+      const played = Object.values(scoreboard).filter(s => s.played).length;
+      if (played >= 1) {
+        lbWrap.style.display = 'block';
+        renderLeaderboard('lb-rows');
+      } else {
+        lbWrap.style.display = 'none';
+      }
+
+      const nextBtn = document.getElementById('next-level-btn');
+      nextBtn.textContent = state.currentLevel >= LEVELS.length - 1
+        ? 'Lihat Hasil Akhir 🏆'
+        : 'Level Berikutnya →';
+
+      showScreen('levelComplete');
+    }
+
+    /* ══════════════════════════════════════════════════════
+       FINAL SCREEN
+    ══════════════════════════════════════════════════════ */
+    function showFinalScreen() {
+      const maxPossible = LEVEL_DEFS.reduce((s, l) => s + l.cards.length * 10, 0);
+
+      // Podium
+      const sorted = [1, 2, 3, 4]
+        .map(g => ({ g, s: scoreboard[g].totalScore, played: scoreboard[g].played }))
+        .sort((a, b) => {
+          if (!a.played && !b.played) return 0;
+          if (!a.played) return 1;
+          if (!b.played) return -1;
+          return b.s - a.s;
+        });
+
+      const podiumContainer = document.getElementById('podium-rows');
+      podiumContainer.innerHTML = '';
+      const medals = ['🥇', '🥈', '🥉', '4️⃣'];
+
+      sorted.forEach((item, idx) => {
+        const cfg = GROUP_CONFIG[item.g];
+        const isActive = item.g === activeGroup;
+        const pct = item.played ? (item.s / maxPossible) : 0;
+        const grade = pct >= 0.85 ? '⭐⭐⭐' : pct >= 0.65 ? '⭐⭐' : '⭐';
+
+        const row = document.createElement('div');
+        row.className = 'podium-row';
+        row.style.borderLeft = isActive ? `4px solid ${cfg.color}` : '';
+        row.innerHTML = `
+      <div class="podium-medal">${item.played ? medals[idx] : '—'}</div>
+      <div class="podium-info">
+        <div class="podium-name" style="color:${cfg.color}">${cfg.emoji} ${cfg.name}${isActive ? ' ← sesi ini' : ''}</div>
+        <div class="podium-breakdown">${item.played
+            ? `Level: ${scoreboard[item.g].levelScores.map((s, i) => `L${i + 1}: ${s}`).join(' · ')}  ${grade}`
+            : 'Belum bermain'}</div>
+      </div>
+      <div class="podium-total" style="color:${item.played ? cfg.color : 'var(--ink2)'}">
+        ${item.played ? item.s : '—'}
+      </div>
+    `;
+        podiumContainer.appendChild(row);
+      });
+
+      // Grade for current group
+      const myPct = scoreboard[activeGroup].totalScore / maxPossible;
+      const gradeEl = document.getElementById('grade-badge');
+      const cfg = GROUP_CONFIG[activeGroup];
+      if (myPct >= 0.85) {
+        gradeEl.textContent = '⭐⭐⭐ Sangat Memuaskan!';
+        gradeEl.style.cssText = `background:var(--gold-light);color:var(--gold);border:2px solid var(--gold);`;
+      } else if (myPct >= 0.65) {
+        gradeEl.textContent = '⭐⭐ Baik!';
+        gradeEl.style.cssText = `background:var(--green-light);color:var(--green);border:2px solid var(--green);`;
+      } else {
+        gradeEl.textContent = '⭐ Tetap Semangat, Coba Lagi!';
+        gradeEl.style.cssText = `background:var(--blue-light);color:var(--blue);border:2px solid var(--blue);`;
+      }
+
+      showScreen('final');
+      launchConfetti();
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CONFETTI
+    ══════════════════════════════════════════════════════ */
+    function launchConfetti() {
+      const colors = ['#D4522A', '#E8823A', '#1A7A6E', '#2E5DA6', '#C99A2E', '#7B3FA0', '#2E7D4F'];
+      for (let i = 0; i < 90; i++) {
+        const p = document.createElement('div');
+        p.className = 'confetti-particle';
+        p.style.cssText = `
+      left:${Math.random() * 100}vw; top:-20px;
+      background:${colors[Math.floor(Math.random() * colors.length)]};
+      width:${6 + Math.random() * 8}px; height:${6 + Math.random() * 8}px;
+      border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
+      animation-duration:${2 + Math.random() * 3}s;
+      animation-delay:${Math.random() * 1.5}s;
+    `;
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 5500);
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       BUTTON EVENTS
+    ══════════════════════════════════════════════════════ */
+
+    // Group selection
+    document.querySelectorAll('.group-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        activeGroup = parseInt(btn.dataset.group);
+        document.getElementById('start-btn').disabled = false;
+      });
+    });
+
+    document.getElementById('start-btn').addEventListener('click', () => {
+      if (!activeGroup) return;
+      startGame();
+    });
+
+    document.getElementById('next-level-btn').addEventListener('click', () => {
+      if (state.currentLevel >= LEVELS.length - 1) {
+        showFinalScreen();
+      } else {
+        state.currentLevel++;
+        state.streak = 0;
+        state.bestStreak = 0;
+        showScreen('game');
+        loadLevel(state.currentLevel);
+      }
+    });
+
+    document.getElementById('replay-level-btn').addEventListener('click', () => {
+      // Roll back this level's contribution
+      state.levelScores.pop();
+      state.levelBestStreaks.pop();
+      state.levelTimeLeft.pop();
+      const prevScore = state.levelScores.reduce((a, b) => a + b, 0);
+      state.score = prevScore;
+      $scoreVal.textContent = state.score;
+      state.streak = 0;
+      state.bestStreak = 0;
+      showScreen('game');
+      loadLevel(state.currentLevel);
+    });
+
+    document.getElementById('back-intro-btn').addEventListener('click', () => {
+      refreshGroupUI();
+      showScreen('intro');
+    });
+
+    document.getElementById('restart-btn').addEventListener('click', () => {
+      // Full reset all scores
+      for (let g = 1; g <= 4; g++) {
+        scoreboard[g] = { totalScore: 0, levelScores: [], levelStreaks: [], played: false };
+      }
+      activeGroup = null;
+      document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('selected'));
+      document.getElementById('start-btn').disabled = true;
+      refreshGroupUI();
+      showScreen('intro');
+    });
+  </script>
+</body>
+
+</html>
